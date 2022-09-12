@@ -66,7 +66,6 @@ def split_cross_attention_forward(self, x, context=None, mask=None):
     mem_free_torch = mem_reserved - mem_active
     mem_free_total = mem_free_cuda + mem_free_torch
 
-    gb = 1024 ** 3
     tensor_size = q.shape[0] * q.shape[1] * k.shape[1] * 4
     mem_required = tensor_size * 2.5
     steps = 1
@@ -78,6 +77,7 @@ def split_cross_attention_forward(self, x, context=None, mask=None):
 
     if steps > 64:
         max_res = math.floor(math.sqrt(math.sqrt(mem_free_total / 2.5)) / 8) * 64
+        gb = 1024 ** 3
         raise RuntimeError(f'Not enough memory, use lower resolution (max approx. {max_res}x{max_res}). '
                            f'Need: {mem_required / 64 / gb:0.1f}GB free, Have:{mem_free_total / gb:0.1f}GB free')
 
@@ -209,15 +209,10 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
         for text, ident in tokens_with_parens:
             mult = 1.0
             for c in text:
-                if c == '[':
+                if c in ['[', ')']:
                     mult /= 1.1
-                if c == ']':
+                elif c in [']', '(']:
                     mult *= 1.1
-                if c == '(':
-                    mult *= 1.1
-                if c == ')':
-                    mult /= 1.1
-
             if mult != 1.0:
                 self.token_mults[ident] = mult
 
@@ -284,17 +279,17 @@ class FrozenCLIPEmbedderWithCustomWords(torch.nn.Module):
                     self.hijack.comments.append(f"Warning: too many input tokens; some ({len(overflowing_words)}) have been truncated:\n{overflowing_text}\n")
 
                 remade_tokens = remade_tokens + [id_end] * (maxlen - 2 - len(remade_tokens))
-                remade_tokens = [id_start] + remade_tokens[0:maxlen-2] + [id_end]
+                remade_tokens = [id_start] + remade_tokens[:maxlen-2] + [id_end]
                 cache[tuple_tokens] = (remade_tokens, fixes, multipliers)
 
             multipliers = multipliers + [1.0] * (maxlen - 2 - len(multipliers))
-            multipliers = [1.0] + multipliers[0:maxlen - 2] + [1.0]
+            multipliers = [1.0] + multipliers[:maxlen - 2] + [1.0]
 
             remade_batch_tokens.append(remade_tokens)
             self.hijack.fixes.append(fixes)
             batch_multipliers.append(multipliers)
 
-        if len(used_custom_terms) > 0:
+        if used_custom_terms:
             self.hijack.comments.append("Used custom terms: " + ", ".join([f'{word} [{checksum}]' for word, checksum in used_custom_terms]))
 
         tokens = torch.asarray(remade_batch_tokens).to(device)
@@ -328,7 +323,7 @@ class EmbeddingsWithFixes(torch.nn.Module):
                 for offset, word in fixes:
                     emb = self.embeddings.word_embeddings[word]
                     emb_len = min(tensor.shape[0]-offset, emb.shape[0])
-                    tensor[offset:offset+emb_len] = self.embeddings.word_embeddings[word][0:emb_len]
+                    tensor[offset:offset+emb_len] = self.embeddings.word_embeddings[word][:emb_len]
 
         return inputs_embeds
 

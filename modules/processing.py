@@ -92,8 +92,9 @@ def slerp(val, low, high):
     high_norm = high/torch.norm(high, dim=1, keepdim=True)
     omega = torch.acos((low_norm*high_norm).sum(1))
     so = torch.sin(omega)
-    res = (torch.sin((1.0-val)*omega)/so).unsqueeze(1)*low + (torch.sin(val*omega)/so).unsqueeze(1) * high
-    return res
+    return (torch.sin((1.0 - val) * omega) / so).unsqueeze(1) * low + (
+        torch.sin(val * omega) / so
+    ).unsqueeze(1) * high
 
 
 def create_random_tensors(shape, seeds, subseeds=None, subseed_strength=0.0, seed_resize_from_h=0, seed_resize_from_w=0):
@@ -129,8 +130,8 @@ def create_random_tensors(shape, seeds, subseeds=None, subseed_strength=0.0, see
             dy = (shape[1] - noise_shape[1]) // 2
             w = noise_shape[2] if dx >= 0 else noise_shape[2] + 2 * dx
             h = noise_shape[1] if dy >= 0 else noise_shape[1] + 2 * dy
-            tx = 0 if dx < 0 else dx
-            ty = 0 if dy < 0 else dy
+            tx = max(dx, 0)
+            ty = max(dy, 0)
             dx = max(-dx, 0)
             dy = max(-dy, 0)
 
@@ -145,8 +146,17 @@ def create_random_tensors(shape, seeds, subseeds=None, subseed_strength=0.0, see
 
 
 def fix_seed(p):
-    p.seed = int(random.randrange(4294967294)) if p.seed is None or p.seed == -1 else p.seed
-    p.subseed = int(random.randrange(4294967294)) if p.subseed is None or p.subseed == -1 else p.subseed
+    p.seed = (
+        random.randrange(4294967294)
+        if p.seed is None or p.seed == -1
+        else p.seed
+    )
+
+    p.subseed = (
+        random.randrange(4294967294)
+        if p.subseed is None or p.subseed == -1
+        else p.subseed
+    )
 
 
 def process_images(p: StableDiffusionProcessing) -> Processed:
@@ -202,7 +212,7 @@ def process_images(p: StableDiffusionProcessing) -> Processed:
             generation_params.update(p.extra_generation_params)
 
         generation_params_text = ", ".join([k if k == v else f'{k}: {v}' for k, v in generation_params.items() if v is not None])
-        
+
         negative_prompt_text = "\nNegative prompt: " + p.negative_prompt if p.negative_prompt else ""
 
         return f"{all_prompts[index]}{negative_prompt_text}\n{generation_params_text}".strip() + "".join(["\n\n" + x for x in comments])
@@ -304,8 +314,7 @@ class StableDiffusionProcessingTxt2Img(StableDiffusionProcessing):
         self.sampler = samplers[self.sampler_index].constructor(self.sd_model)
 
     def sample(self, x, conditioning, unconditional_conditioning):
-        samples_ddim = self.sampler.sample(self, x, conditioning, unconditional_conditioning)
-        return samples_ddim
+        return self.sampler.sample(self, x, conditioning, unconditional_conditioning)
 
 
 def get_crop_region(mask, pad=0):
@@ -431,9 +440,8 @@ class StableDiffusionProcessingImg2Img(StableDiffusionProcessing):
                 image = image.crop(crop_region)
                 image = images.resize_image(2, image, self.width, self.height)
 
-            if self.image_mask is not None:
-                if self.inpainting_fill != 1:
-                    image = fill(image, latent_mask)
+            if self.image_mask is not None and self.inpainting_fill != 1:
+                image = fill(image, latent_mask)
 
             image = np.array(image).astype(np.float32) / 255.0
             image = np.moveaxis(image, 2, 0)

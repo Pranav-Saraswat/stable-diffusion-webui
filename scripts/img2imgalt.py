@@ -77,7 +77,7 @@ class Script(scripts.Script):
         p.batch_count = 1
 
         def sample_extra(x, conditioning, unconditional_conditioning):
-            lat = tuple([int(x*10) for x in p.init_latent.cpu().numpy().flatten().tolist()])
+            lat = tuple(int(x*10) for x in p.init_latent.cpu().numpy().flatten().tolist())
 
             if cache[0] is not None and cache[1] == cfg and cache[2] == st and len(cache[3]) == len(lat) and sum(np.array(cache[3])-np.array(lat)) < 100 and cache[4] == original_prompt:
                 noise = cache[0]

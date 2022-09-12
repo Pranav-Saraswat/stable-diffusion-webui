@@ -64,5 +64,5 @@ def save_styles(path: str, styles: abc.Iterable[PromptStyle]) -> None:
 
     # Always keep a backup file around
     if os.path.exists(path):
-        shutil.move(path, path + ".bak")
+        shutil.move(path, f"{path}.bak")
     shutil.move(temp_path, path)

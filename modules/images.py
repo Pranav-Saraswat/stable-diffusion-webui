@@ -138,7 +138,13 @@ def draw_grid_annotations(im, width, height, hor_texts, ver_texts):
     color_active = (0, 0, 0)
     color_inactive = (153, 153, 153)
 
-    pad_left = 0 if sum([sum([len(line.text) for line in lines]) for lines in ver_texts]) == 0 else width * 3 // 4
+    pad_left = (
+        0
+        if sum(sum(len(line.text) for line in lines) for lines in ver_texts)
+        == 0
+        else width * 3 // 4
+    )
+
 
     cols = im.width // width
     rows = im.height // height
@@ -161,8 +167,17 @@ def draw_grid_annotations(im, width, height, hor_texts, ver_texts):
             bbox = calc_d.multiline_textbbox((0, 0), line.text, font=fnt)
             line.size = (bbox[2] - bbox[0], bbox[3] - bbox[1])
 
-    hor_text_heights = [sum([line.size[1] + line_spacing for line in lines]) - line_spacing for lines in hor_texts]
-    ver_text_heights = [sum([line.size[1] + line_spacing for line in lines]) - line_spacing * len(lines) for lines in ver_texts]
+    hor_text_heights = [
+        sum(line.size[1] + line_spacing for line in lines) - line_spacing
+        for lines in hor_texts
+    ]
+
+    ver_text_heights = [
+        sum(line.size[1] + line_spacing for line in lines)
+        - line_spacing * len(lines)
+        for lines in ver_texts
+    ]
+
 
     pad_top = max(hor_text_heights) + line_spacing * 2
 
@@ -256,7 +271,7 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
         #file_decoration = f"-{seed}-{sanitize_filename_part(prompt)[:128]}"
 
     #Add new filenames tags here
-    file_decoration = "-" + file_decoration
+    file_decoration = f"-{file_decoration}"
     if seed is not None:
         file_decoration = file_decoration.replace("[SEED]", str(seed))
     if prompt is not None:
@@ -280,15 +295,22 @@ def save_image(image, path, basename, seed=None, prompt=None, extension='png', i
 
     if save_to_dirs and not no_prompt:
         words = [x for x in re_nonletters.split(prompt or "") if len(x)>0]
-        if len(words) == 0:
+        if not words:
             words = ["empty"]
 
-        dirname = " ".join(words[0:opts.save_to_dirs_prompt_len]).strip()
+        dirname = " ".join(words[:opts.save_to_dirs_prompt_len]).strip()
         path = os.path.join(path, dirname)
 
     os.makedirs(path, exist_ok=True)
 
-    filecount = len([x for x in os.listdir(path) if os.path.splitext(x)[1] == '.' + extension])
+    filecount = len(
+        [
+            x
+            for x in os.listdir(path)
+            if os.path.splitext(x)[1] == f'.{extension}'
+        ]
+    )
+
     fullfn = "a.png"
     fullfn_without_extension = "a"
     for i in range(500):
@@ -324,7 +346,7 @@ class Upscaler:
         return img
 
     def upscale(self, img, w, h):
-        for i in range(3):
+        for _ in range(3):
             if img.width >= w and img.height >= h:
                 break
 

@@ -33,9 +33,7 @@ def txt2img(prompt: str, negative_prompt: str, prompt_style: str, steps: int, sa
     print(f"\ntxt2img: {prompt}", file=shared.progress_print_out)
     processed = modules.scripts.scripts_txt2img.run(p, *args)
 
-    if processed is not None:
-        pass
-    else:
+    if processed is None:
         processed = process_images(p)
 
     shared.total_tqdm.clear()

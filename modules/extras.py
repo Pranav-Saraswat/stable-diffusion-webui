@@ -71,16 +71,18 @@ def run_extras(image, gfpgan_visibility, codeformer_visibility, codeformer_weigh
 
 
 def run_pnginfo(image):
-    info = ''
-    for key, text in image.info.items():
-        info += f"""
+    info = ''.join(
+        f"""
 <div>
 <p><b>{plaintext_to_html(str(key))}</b></p>
 <p>{plaintext_to_html(str(text))}</p>
 </div>
-""".strip()+"\n"
+""".strip()
+        + "\n"
+        for key, text in image.info.items()
+    )
 
-    if len(info) == 0:
+    if not info:
         message = "Nothing found in the image."
         info = f"<div><p>{message}<p></div>"
 

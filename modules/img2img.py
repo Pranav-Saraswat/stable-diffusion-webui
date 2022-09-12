@@ -99,7 +99,7 @@ def img2img(prompt: str, negative_prompt: str, prompt_style: str, init_img, init
             if initial_seed is None:
                 initial_seed = processed.seed
                 initial_info = processed.info
-            
+
             init_img = processed.images[0]
 
             if do_color_correction and correction_target is not None:
@@ -144,9 +144,7 @@ def img2img(prompt: str, negative_prompt: str, prompt_style: str, init_img, init
         work = []
 
         for y, h, row in grid.tiles:
-            for tiledata in row:
-                work.append(tiledata[2])
-
+            work.extend(tiledata[2] for tiledata in row)
         batch_count = math.ceil(len(work) / p.batch_size)
         state.job_count = batch_count * upscale_count
 

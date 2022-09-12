@@ -89,7 +89,7 @@ class InterrogateModels:
         import clip
 
         top_count = min(top_count, len(text_array))
-        text_tokens = clip.tokenize([text for text in text_array]).to(shared.device)
+        text_tokens = clip.tokenize(list(text_array)).to(shared.device)
         text_features = self.clip_model.encode_text(text_tokens).type(self.dtype)
         text_features /= text_features.norm(dim=-1, keepdim=True)
 
@@ -131,17 +131,24 @@ class InterrogateModels:
                 image_features /= image_features.norm(dim=-1, keepdim=True)
 
                 if shared.opts.interrogate_use_builtin_artists:
-                    artist = self.rank(image_features, ["by " + artist.name for artist in shared.artist_db.artists])[0]
+                    artist = self.rank(
+                        image_features,
+                        [
+                            f"by {artist.name}"
+                            for artist in shared.artist_db.artists
+                        ],
+                    )[0]
 
-                    res += ", " + artist[0]
+
+                    res += f", {artist[0]}"
 
                 for name, topn, items in self.categories:
                     matches = self.rank(image_features, items, top_count=topn)
                     for match, score in matches:
-                        res += ", " + match
+                        res += f", {match}"
 
         except Exception:
-            print(f"Error interrogating", file=sys.stderr)
+            print("Error interrogating", file=sys.stderr)
             print(traceback.format_exc(), file=sys.stderr)
 
         self.unload()
